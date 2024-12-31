@@ -3,6 +3,8 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
+import re
+from datetime import datetime
 
 # Kết nối đến database SQLite
 conn = sqlite3.connect('dormitory.db')
@@ -189,6 +191,24 @@ CREATE TABLE IF NOT EXISTS StudentFines (
 cursor.executescript(create_tables_query)
 conn.commit()
 
+# Hàm kiểm tra email hợp lệ
+def is_valid_email(email):
+    pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return re.match(pattern, email) is not None
+
+# Hàm kiểm tra số điện thoại hợp lệ
+def is_valid_phone(phone):
+    pattern = r'^\d{10,11}$'
+    return re.match(pattern, phone) is not None
+
+# Hàm kiểm tra ngày sinh hợp lệ
+def is_valid_date(date_text):
+    try:
+        datetime.strptime(date_text, '%d-%m-%Y')
+        return True
+    except ValueError:
+        return False
+
 # Đăng ký người dùng
 def register_user():
     username = entry_username.get()
@@ -250,6 +270,18 @@ def open_main_app():
             room_id = entry_room_id.get()
             room_allocation_date = entry_room_allocation_date.get()
 
+            if not is_valid_email(email):
+                messagebox.showerror("Lỗi", "Email không hợp lệ.")
+                return
+
+            if not is_valid_phone(contact):
+                messagebox.showerror("Lỗi", "Số điện thoại không hợp lệ.")
+                return
+
+            if not is_valid_date(dob):
+                messagebox.showerror("Lỗi", "Ngày sinh không hợp lệ. Định dạng đúng là DD-MM-YYYY.")
+                return
+
             if first_name and last_name and dob and email:
                 try:
                     cursor.execute('''INSERT INTO Students (
@@ -290,6 +322,18 @@ def open_main_app():
             admission_date = entry_admission_date.get()
             room_id = entry_room_id.get()
             room_allocation_date = entry_room_allocation_date.get()
+
+            if not is_valid_email(email):
+                messagebox.showerror("Lỗi", "Email không hợp lệ.")
+                return
+
+            if not is_valid_phone(contact):
+                messagebox.showerror("Lỗi", "Số điện thoại không hợp lệ.")
+                return
+
+            if not is_valid_date(dob):
+                messagebox.showerror("Lỗi", "Ngày sinh không hợp lệ. Định dạng đúng là DD-MM-YYYY.")
+                return
 
             if first_name and last_name and dob and email:
                 try:
@@ -332,7 +376,8 @@ def open_main_app():
                 entry_profile_picture.delete(0, tk.END)
                 entry_profile_picture.insert(0, file_path)
 
-        tk.Label(content_frame, text="Quản lý sinh viên", font=("Arial", 16)).pack(pady=10)
+        tk.Label(content_frame, text="Quản lý sinh viên", font=("Helvetica", 16)).pack(pady=10)
+
 
         form_frame = tk.Frame(content_frame)
         form_frame.pack(pady=10)
@@ -345,7 +390,7 @@ def open_main_app():
         entry_last_name = tk.Entry(form_frame)
         entry_last_name.grid(row=0, column=3, padx=5, pady=5)
 
-        tk.Label(form_frame, text="Ngày sinh (YYYY-MM-DD)").grid(row=1, column=0, padx=5, pady=5)
+        tk.Label(form_frame, text="Ngày sinh (DD-MM-YYYY)").grid(row=1, column=0, padx=5, pady=5)
         entry_dob = tk.Entry(form_frame)
         entry_dob.grid(row=1, column=1, padx=5, pady=5)
 
@@ -387,7 +432,7 @@ def open_main_app():
         entry_emergency_contact = tk.Entry(form_frame)
         entry_emergency_contact.grid(row=5, column=3, padx=5, pady=5)
 
-        tk.Label(form_frame, text="Ngày nhập học (YYYY-MM-DD)").grid(row=6, column=0, padx=5, pady=5)
+        tk.Label(form_frame, text="Ngày nhập học (DD-MM-YYYY)").grid(row=6, column=0, padx=5, pady=5)
         entry_admission_date = tk.Entry(form_frame)
         entry_admission_date.grid(row=6, column=1, padx=5, pady=5)
 
@@ -395,7 +440,7 @@ def open_main_app():
         entry_room_id = tk.Entry(form_frame)
         entry_room_id.grid(row=6, column=3, padx=5, pady=5)
 
-        tk.Label(form_frame, text="Ngày phân phòng (YYYY-MM-DD)").grid(row=7, column=0, padx=5, pady=5)
+        tk.Label(form_frame, text="Ngày phân phòng (DD-MM-YYYY)").grid(row=7, column=0, padx=5, pady=5)
         entry_room_allocation_date = tk.Entry(form_frame)
         entry_room_allocation_date.grid(row=7, column=1, padx=5, pady=5)
 
@@ -406,34 +451,252 @@ def open_main_app():
         tk.Button(button_frame, text="Cập nhật", command=update_student).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Xóa", command=delete_student).pack(side=tk.LEFT, padx=5)
 
-        student_tree = ttk.Treeview(content_frame, columns=(
-            "StudentID", "FirstName", "LastName", "DateOfBirth", "Gender", "ContactNumber", "Email",
-            "Address", "Nationality", "ProgramOfStudy", "ProfilePicture", "EmergencyContactName",
-            "EmergencyContactNumber", "AdmissionDate", "RoomID", "RoomAllocationDate"
-        ), show='headings')
+
+        column_mapping = {
+            "ID": "Mã sinh viên",
+            "FirstName": "Tên",
+            "LastName": "Họ",
+            "DateOfBirth": "Ngày sinh",
+            "Gender": "Giới tính",
+            "ContactNumber": "Số điện thoại",
+            "Email": "Email",
+            "Address": "Địa chỉ",
+            "Nationality": "Quốc tịch",
+            "ProgramOfStudy": "Chương trình học",
+            "ProfilePicture": "Ảnh đại diện",
+            "EmergencyContactName": "Tên liên hệ khẩn cấp",
+            "EmergencyContactNumber": "Số liên hệ khẩn cấp",
+            "AdmissionDate": "Ngày nhập học",
+            "RoomID": "Mã phòng",
+            "RoomAllocationDate": "Ngày phân phòng"
+        }
+
+
+        student_tree = ttk.Treeview(content_frame, columns=list(column_mapping.keys()), show="headings")
+        student_tree.pack(pady=10, fill=tk.BOTH, expand=True)
 
         for col in student_tree['columns']:
-            student_tree.heading(col, text=col)
+            student_tree.heading(col, text=column_mapping[col])
             student_tree.column(col, width=100)
 
-        student_tree.pack(pady=10, fill=tk.BOTH, expand=True)
 
         load_students()
 
     # Hàm hiển thị trang hợp đồng
     def show_contracts():
         clear_frame(content_frame)
-        tk.Label(content_frame, text="Quản lý hợp đồng", font=("Arial", 16)).pack(pady=10)
+
+        def load_contracts():
+            for row in contract_tree.get_children():
+                contract_tree.delete(row)
+            cursor.execute('SELECT * FROM Contracts')
+            for contract in cursor.fetchall():
+                contract_tree.insert('', tk.END, values=contract)
+
+        def add_contract():
+            student_id = entry_student_id.get()
+            start_date = entry_start_date.get()
+            end_date = entry_end_date.get()
+            contract_status = entry_contract_status.get()
+            monthly_rent = entry_monthly_rent.get()
+            security_deposit = entry_security_deposit.get()
+            terms_and_conditions = entry_terms_and_conditions.get()
+            signed_date = entry_signed_date.get()
+            renewal_option = entry_renewal_option.get()
+            notes = entry_notes.get()
+            created_by_staff_id = entry_created_by_staff_id.get()
+            last_updated_by_staff_id = entry_last_updated_by_staff_id.get()
+
+            if not is_valid_date(start_date) or not is_valid_date(end_date):
+                messagebox.showerror("Lỗi", "Ngày không hợp lệ. Định dạng đúng là DD-MM-YYYY.")
+                return
+
+            if student_id and start_date and end_date and monthly_rent and security_deposit:
+                try:
+                    cursor.execute('''INSERT INTO Contracts (
+                        StudentID, StartDate, EndDate, ContractStatus, MonthlyRent, SecurityDeposit, TermsAndConditions,
+                        SignedDate, RenewalOption, Notes, CreatedByStaffID, LastUpdatedByStaffID
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (student_id, start_date, end_date, contract_status, monthly_rent, security_deposit, terms_and_conditions,
+                        signed_date, renewal_option, notes, created_by_staff_id, last_updated_by_staff_id))
+                    conn.commit()
+                    load_contracts()
+                    messagebox.showinfo("Thành công", "Thêm hợp đồng thành công!")
+                except Exception as e:
+                    messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {e}")
+            else:
+                messagebox.showerror("Lỗi", "Vui lòng nhập các thông tin bắt buộc.")
+
+        def update_contract():
+            selected_item = contract_tree.selection()
+            if not selected_item:
+                messagebox.showwarning("Chưa chọn hợp đồng", "Vui lòng chọn hợp đồng để sửa.")
+                return
+
+            contract_id = contract_tree.item(selected_item)['values'][0]
+            student_id = entry_student_id.get()
+            start_date = entry_start_date.get()
+            end_date = entry_end_date.get()
+            contract_status = entry_contract_status.get()
+            monthly_rent = entry_monthly_rent.get()
+            security_deposit = entry_security_deposit.get()
+            terms_and_conditions = entry_terms_and_conditions.get()
+            signed_date = entry_signed_date.get()
+            renewal_option = entry_renewal_option.get()
+            notes = entry_notes.get()
+            created_by_staff_id = entry_created_by_staff_id.get()
+            last_updated_by_staff_id = entry_last_updated_by_staff_id.get()
+
+            if not is_valid_date(start_date) or not is_valid_date(end_date):
+                messagebox.showerror("Lỗi", "Ngày không hợp lệ. Định dạng đúng là DD-MM-YYYY.")
+                return
+
+            if student_id and start_date and end_date and monthly_rent and security_deposit:
+                try:
+                    cursor.execute('''UPDATE Contracts SET
+                        StudentID = ?, StartDate = ?, EndDate = ?, ContractStatus = ?, MonthlyRent = ?, SecurityDeposit = ?,
+                        TermsAndConditions = ?, SignedDate = ?, RenewalOption = ?, Notes = ?, CreatedByStaffID = ?, LastUpdatedByStaffID = ?
+                        WHERE ContractID = ?''',
+                        (student_id, start_date, end_date, contract_status, monthly_rent, security_deposit, terms_and_conditions,
+                        signed_date, renewal_option, notes, created_by_staff_id, last_updated_by_staff_id, contract_id))
+                    conn.commit()
+                    load_contracts()
+                    messagebox.showinfo("Thành công", "Cập nhật hợp đồng thành công!")
+                except Exception as e:
+                    messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {e}")
+            else:
+                messagebox.showerror("Lỗi", "Vui lòng nhập các thông tin bắt buộc.")
+
+        def delete_contract():
+            selected_item = contract_tree.selection()
+            if not selected_item:
+                messagebox.showwarning("Chưa chọn hợp đồng", "Vui lòng chọn hợp đồng để xóa.")
+                return
+
+            contract_id = contract_tree.item(selected_item)['values'][0]
+            confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn xóa hợp đồng này?")
+            if confirm:
+                try:
+                    cursor.execute('DELETE FROM Contracts WHERE ContractID = ?', (contract_id,))
+                    conn.commit()
+                    load_contracts()
+                    messagebox.showinfo("Thành công", "Xóa hợp đồng thành công!")
+                except Exception as e:
+                    messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {e}")
+
+
+
+        tk.Label(content_frame, text="Quản lý hợp đồng", font=("Helvetica", 16, "bold"), bg="#f0f0f0").pack(pady=10)
+
+        # Từ điển ánh xạ các tiêu đề cột từ tiếng Anh sang tiếng Việt
+        column_mapping = {
+            "ContractID": "Mã hợp đồng",
+            "StudentID": "Mã sinh viên",
+            "StartDate": "Ngày bắt đầu",
+            "EndDate": "Ngày kết thúc",
+            "ContractStatus": "Trạng thái hợp đồng",
+            "MonthlyRent": "Tiền thuê hàng tháng",
+            "SecurityDeposit": "Tiền đặt cọc",
+            "TermsAndConditions": "Điều khoản và điều kiện",
+            "SignedDate": "Ngày ký",
+            "RenewalOption": "Tùy chọn gia hạn",
+            "Notes": "Ghi chú",
+            "CreatedByStaffID": "Mã nhân viên tạo",
+            "LastUpdatedByStaffID": "Mã nhân viên cập nhật",
+            "CreatedAt": "Ngày tạo",
+            "LastUpdatedAt": "Ngày cập nhật"
+        }
+
+        contract_tree = ttk.Treeview(content_frame, columns=list(column_mapping.keys()), show="headings")
+        contract_tree.pack(fill=tk.BOTH, expand=True)
+
+        for col in contract_tree["columns"]:
+            contract_tree.heading(col, text=column_mapping[col])
+            contract_tree.column(col, width=100)
+
+        load_contracts()
+
+        # Form nhập liệu
+        form_frame = tk.Frame(content_frame, bg="#f0f0f0")
+        form_frame.pack(pady=10, fill=tk.X)
+
+        student_id_frame = tk.Label(form_frame, text="Mã sinh viên:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=0, column=0, pady=5, padx=5)
+        student_id_frame.pack(side=tk.LEFT, padx=5)
+        entry_student_id = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_student_id.grid(row=0, column=1, pady=5, padx=5)
+
+        start_date_frame = tk.Label(form_frame, text="Ngày bắt đầu:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=1, column=0, pady=5, padx=5)
+        start_date_frame.pack(side=tk.LEFT, padx=5)
+        entry_start_date = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_start_date.grid(row=1, column=1, pady=5, padx=5)
+
+        end_date_frame = tk.Label(form_frame, text="Ngày kết thúc:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=2, column=0, pady=5, padx=5)
+        end_date_frame.pack(side=tk.LEFT, padx=5)
+        entry_end_date = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_end_date.grid(row=2, column=1, pady=5, padx=5)
+
+        contract_status_frame = tk.Label(form_frame, text="Trạng thái hợp đồng:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=3, column=0, pady=5, padx=5)
+        contract_status_frame.pack(side=tk.LEFT, padx=5)
+        entry_contract_status = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_contract_status.grid(row=3, column=1, pady=5, padx=5)
+
+        monthly_rent_frame = tk.Label(form_frame, text="Tiền thuê hàng tháng:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=4, column=0, pady=5, padx=5)
+        monthly_rent_frame.pack(side=tk.LEFT, padx=5)
+        entry_monthly_rent = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_monthly_rent.grid(row=4, column=1, pady=5, padx=5)
+
+        security_deposit_frame = tk.Label(form_frame, text="Tiền đặt cọc:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=5, column=0, pady=5, padx=5)
+        security_deposit_frame.pack(side=tk.LEFT, padx=5)
+        entry_security_deposit = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_security_deposit.grid(row=5, column=1, pady=5, padx=5)
+
+        terms_and_conditions_frame = tk.Label(form_frame, text="Điều khoản và điều kiện:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=6, column=0, pady=5, padx=5)
+        terms_and_conditions_frame.pack(side=tk.LEFT, padx=5)
+        entry_terms_and_conditions = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_terms_and_conditions.grid(row=6, column=1, pady=5, padx=5)
+
+        signed_date_frame = tk.Label(form_frame, text="Ngày ký:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=7, column=0, pady=5, padx=5)
+        signed_date_frame.pack(side=tk.LEFT, padx=5)
+        entry_signed_date = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_signed_date.grid(row=7, column=1, pady=5, padx=5)
+
+        renewal_option_frame = tk.Label(form_frame, text="Tùy chọn gia hạn:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=8, column=0, pady=5, padx=5)
+        renewal_option_frame.pack(side=tk.LEFT, padx=5)
+        entry_renewal_option = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_renewal_option.grid(row=8, column=1, pady=5, padx=5)
+
+        notes_frame = tk.Label(form_frame, text="Ghi chú:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=9, column=0, pady=5, padx=5)
+        notes_frame.pack(side=tk.LEFT, padx=5)
+        entry_notes = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_notes.grid(row=9, column=1, pady=5, padx=5)
+
+        created_by_staff_id_frame = tk.Label(form_frame, text="Mã nhân viên tạo:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=10, column=0, pady=5, padx=5)
+        created_by_staff_id_frame.pack(side=tk.LEFT, padx=5)
+        entry_created_by_staff_id = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_created_by_staff_id.grid(row=10, column=1, pady=5, padx=5)
+
+        last_updated_by_staff_id_frame = tk.Label(form_frame, text="Mã nhân viên cập nhật:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=11, column=0, pady=5, padx=5)
+        last_updated_by_staff_id_frame.pack(side=tk.LEFT, padx=5)
+        entry_last_updated_by_staff_id = tk.Entry(form_frame, font=("Helvetica", 10), width=15)
+        entry_last_updated_by_staff_id.grid(row=11, column=1, pady=5, padx=5)
+
+        # Nút bấm
+        button_frame = tk.Frame(content_frame, bg="#f0f0f0")
+        button_frame.pack(pady=10)
+
+        tk.Button(button_frame, text="Thêm hợp đồng", font=("Helvetica", 12), bg="#8BC34A", fg="white", command=add_contract).grid(row=0, column=0, padx=10)
+        tk.Button(button_frame, text="Sửa hợp đồng", font=("Helvetica", 12), bg="#FFA500", fg="white", command=update_contract).grid(row=0, column=1, padx=10)
+        tk.Button(button_frame, text="Xóa hợp đồng", font=("Helvetica", 12), bg="#FF6347", fg="white", command=delete_contract).grid(row=0, column=2, padx=10)
 
     # Hàm hiển thị trang nhân viên
     def show_staff():
         clear_frame(content_frame)
-        tk.Label(content_frame, text="Quản lý nhân viên", font=("Arial", 16)).pack(pady=10)
+        tk.Label(content_frame, text="Quản lý nhân viên", font=("Helvetica", 16)).pack(pady=10)
 
     # Hàm hiển thị trang phòng ở
     def show_room():
         clear_frame(content_frame)
-        tk.Label(content_frame, text="Quản lý phòng ở", font=("Arial", 16)).pack(pady=10)
+        tk.Label(content_frame, text="Quản lý phòng ở", font=("Helvetica", 16)).pack(pady=10)
 
     # Hàm xoá nội dung trong frame
     def clear_frame(frame):
@@ -460,26 +723,92 @@ def open_main_app():
 
     root.mainloop()
 
+
+# Function to handle login
+def handle_login():
+    username = entry_username.get()
+    password = entry_password.get()
+    
+    # Show the progress bar
+    progress_bar.pack(pady=10)
+    login_window.update_idletasks()
+    
+    # Start a simulation of the loading process with after()
+    progress_bar['value'] = 0  # Reset progress bar to 0
+    simulate_loading(0, username, password)
+
+# Function to simulate the loading process (non-blocking)
+def simulate_loading(i, username, password):
+    if i < 100:
+        progress_bar['value'] = i
+        login_window.after(8, simulate_loading, i + 1, username, password)  # Update progress every 20ms
+    else:
+        # Hide the progress bar after the loading is complete
+        progress_bar.pack_forget()
+        messagebox.showinfo("Login Info", "Login successfully")
+        open_main_app()
+
+# Function to open register window
+def open_register_window():
+    register_window = tk.Toplevel(login_window)
+    register_window.title("Đăng ký")
+    register_window.geometry("400x250")
+    register_window.configure(bg="#e0e0e0")
+
+    tk.Label(register_window, text="Đăng ký", font=("Helvetica", 18, "bold"), bg="#e0e0e0").pack(pady=15)
+
+    frame = tk.Frame(register_window, bg="#e0e0e0")
+    frame.pack(pady=10)
+
+    tk.Label(frame, text="Tên đăng nhập:", font=("Helvetica", 12), bg="#e0e0e0").grid(row=0, column=0, pady=10, padx=10)
+    entry_reg_username = tk.Entry(frame, font=("Helvetica", 12), width=20)
+    entry_reg_username.grid(row=0, column=1, pady=10, padx=10)
+
+    tk.Label(frame, text="Mật khẩu:", font=("Helvetica", 12), bg="#e0e0e0").grid(row=1, column=0, pady=10, padx=10)
+    entry_reg_password = tk.Entry(frame, font=("Helvetica", 12), width=20, show="*")
+    entry_reg_password.grid(row=1, column=1, pady=10, padx=10)
+
+    tk.Label(frame, text="Xác nhận mật khẩu:", font=("Helvetica", 12), bg="#e0e0e0").grid(row=2, column=0, pady=10, padx=10)
+    entry_confirm_password = tk.Entry(frame, font=("Helvetica", 12), width=20, show="*")
+    entry_confirm_password.grid(row=2, column=1, pady=10, padx=10)
+
+    tk.Button(register_window, text="Đăng ký", font=("Helvetica", 12), bg="#8BC34A", fg="white", command=lambda: messagebox.showinfo("Register Info", "Registration Successful")).pack(pady=20)
+
 # Tạo cửa sổ đăng nhập
 login_window = tk.Tk()
 login_window.title("Đăng nhập")
-login_window.geometry("400x300")
+login_window.geometry("400x310")
+login_window.configure(bg="#f0f0f0")
 
+# Tiêu đề
+tk.Label(login_window, text="Đăng nhập", font=("Helvetica", 16, "bold"), bg="#f0f0f0").pack(pady=15)
 
-# Nhãn và ô nhập liệu đăng nhập
-tk.Label(login_window, text="Tên đăng nhập").pack(pady=5)
-entry_username = tk.Entry(login_window)
-entry_username.pack(pady=5)
+# Nhãn và ô nhập liệu
+frame = tk.Frame(login_window, bg="#f0f0f0")
+frame.pack(pady=10)
 
-tk.Label(login_window, text="Mật khẩu").pack(pady=5)
-entry_password = tk.Entry(login_window, show="*")
-entry_password.pack(pady=5)
+# Tên đăng nhập
+tk.Label(frame, text="Tên đăng nhập:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=0, column=0, pady=10, padx=10)
+entry_username = tk.Entry(frame, font=("Helvetica", 10), width=20)
+entry_username.grid(row=0, column=1, pady=10, padx=10)
+entry_username.insert(0, "anhnguyen") 
 
+tk.Label(frame, text="Mật khẩu:", font=("Helvetica", 10), bg="#f0f0f0").grid(row=1, column=0, pady=10, padx=10)
+entry_password = tk.Entry(frame, font=("Helvetica", 10), width=20, show="*")
+entry_password.grid(row=1, column=1, pady=10, padx=10)
+entry_password.insert(0, "123456") 
 
-tk.Button(login_window, text="Đăng nhập", command=login_user).pack(pady=10)
-tk.Button(login_window, text="Đăng ký", command=register_user).pack(pady=10)
+button_frame = tk.Frame(login_window, bg="#f0f0f0")
+button_frame.pack(pady=10)
+
+tk.Button(button_frame, text="Đăng nhập", font=("Helvetica", 10), bg="#8BC34A", fg="white", width=10, height=1, command=handle_login).grid(row=0, column=0, padx=10)
+tk.Button(button_frame, text="Đăng ký", font=("Helvetica", 10), bg="#03A9F4", fg="white", width=10, height=1, command=open_register_window).grid(row=0, column=1, padx=10)
+
+progress_bar = ttk.Progressbar(login_window, orient="horizontal", length=300, mode="determinate")
+
+tk.Label(login_window, text="Don't have an account?", font=("Helvetica", 10), fg="#03A9F4", bg="#f0f0f0").pack(pady=5)
+tk.Label(login_window, text="Forgot your password ?", font=("Helvetica", 10), fg="#03A9F4", bg="#f0f0f0").pack(pady=5)
 
 login_window.mainloop()
-
 
 conn.close()
