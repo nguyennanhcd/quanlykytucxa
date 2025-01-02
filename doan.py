@@ -400,7 +400,7 @@ def open_main_app():
         search_frame = tk.Frame(content_frame)
         search_frame.pack(pady=10)
 
-        tk.Label(search_frame, text="Tìm kiếm:").pack(side=tk.LEFT, padx=5)
+        tk.Label(search_frame, text="Tìm kiếm: ").pack(side=tk.LEFT, padx=5)
         entry_search = tk.Entry(search_frame)
         entry_search.pack(side=tk.LEFT, padx=5)
         tk.Button(search_frame, text="Tìm kiếm", command=search_students).pack(side=tk.LEFT, padx=5)
